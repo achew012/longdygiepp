@@ -57,14 +57,17 @@ dataset_folder = dataset.get_local_copy()
 if os.path.exists(dataset_folder)==False:
     os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
 
-sys.path.append(os.getcwd())
+current_dir = os.getcwd()
+train_script = os.path.join(current_dir, "scripts/train.sh")
+
+sys.path.append(current_dir)
 
 # Use this to initiate the dataset/dataloader objects
 #dataset_paths = [os.path.join(dataset_folder, "data/train.json"), os.path.join(dataset_folder, "data/dev.json"), os.path.join(dataset_folder, "data/test.json")]
 
-#subprocess.run(['ls', './data'])
-
-subprocess.run(["./scripts/train.sh", "ace-event"], capture_output=True)
+subprocess.run(['pip', 'list'])
+#os.chmod(train_script, 0o755)
+#subprocess.run(["bash", train_script, "ace-event"])
 
 # task.close()
 
