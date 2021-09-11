@@ -43,23 +43,28 @@ class bucket_ops:
 task = Task.init("DocIE", "longdygiepp")
 task.execute_remotely(queue_name="default", exit_process=True)
 
-bucket_ops.download_folder(
-    local_path="./pretrained/", 
-    remote_path="s3://experiment-logging/pretrained/longformer-base-4096", 
-    )
+#Download Pretrained Models
+# bucket_ops.download_folder(
+#     local_path="./pretrained/longformer-base-4096", 
+#     remote_path="s3://experiment-logging/pretrained/longformer-base-4096", 
+#     )
 
 import os, subprocess, sys
 
-sys.path.append(os.getcwd())
-
 dataset = Dataset.get(dataset_name="collated-data", dataset_project="ace05-event", dataset_tags=["original"], only_published=True)
 dataset_folder = dataset.get_local_copy()
-os.symlink(os.path.join(dataset_folder, "data"), "{}/data".format(os.getcwd()))
+
+if os.path.exists(dataset_folder)==False:
+    os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
+
+sys.path.append(os.getcwd())
 
 # Use this to initiate the dataset/dataloader objects
 #dataset_paths = [os.path.join(dataset_folder, "data/train.json"), os.path.join(dataset_folder, "data/dev.json"), os.path.join(dataset_folder, "data/test.json")]
 
-subprocess.run(["bash", "scripts/train.sh", "ace-event"], capture_output=True)
+#subprocess.run(['ls', './data'])
+
+subprocess.run(["./scripts/train.sh", "ace-event"], capture_output=True)
 
 # task.close()
 

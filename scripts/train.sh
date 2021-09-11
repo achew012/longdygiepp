@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # USAGE: `bash train.sh [config_name]`
 #
 # The `config_name` is the name of one of the `jsonnet` config files in the
