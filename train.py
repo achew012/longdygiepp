@@ -14,6 +14,10 @@ def create_clearml_dataset(dataset_project, dataset_version, local_dataset_path:
 def delete_dataset(dataset_project, dataset_name):
     Dataset.delete(dataset_name=dataset_name, dataset_project=dataset_project, force=True)
 
+#delete_dataset(dataset_name="processed-data", dataset_project="ace05-event")
+#dataset = create_clearml_dataset("ace05-event", "processed-data", "data/ace-event/processed-data/default-settings/json/", tags = ["original"])
+#dataset = create_clearml_dataset("ace05-event", "collated-data", "data/ace-event/collated-data/default-settings/json/", tags = ["original"])
+
 class bucket_ops:
     StorageManager.set_cache_file_limit(5, cache_context=None)
 
@@ -35,11 +39,6 @@ class bucket_ops:
     def upload_file(local_path:str, remote_path:str):
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
-
-#delete_dataset(dataset_name="processed-data", dataset_project="ace05-event")
-#dataset = create_clearml_dataset("ace05-event", "processed-data", "data/ace-event/processed-data/default-settings/json/", tags = ["original"])
-#dataset = create_clearml_dataset("ace05-event", "collated-data", "data/ace-event/collated-data/default-settings/json/", tags = ["original"])
-
 task = Task.init("DocIE", "longdygiepp")
 task.execute_remotely(queue_name="default", exit_process=True)
 
@@ -51,25 +50,26 @@ task.execute_remotely(queue_name="default", exit_process=True)
 
 import os, subprocess, sys
 
-dataset = Dataset.get(dataset_name="collated-data", dataset_project="ace05-event", dataset_tags=["original"], only_published=True)
+dataset = Dataset.get(dataset_name="collated-data", dataset_project="datasets/ace05-event", dataset_tags=["original"], only_published=True)
 dataset_folder = dataset.get_local_copy()
 
-if os.path.exists(dataset_folder)==False:
-    os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
+# if os.path.exists(dataset_folder)==False:
+os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
 
 current_dir = os.getcwd()
 train_script = os.path.join(current_dir, "scripts/train.sh")
-
 sys.path.append(current_dir)
 
 # Use this to initiate the dataset/dataloader objects
 #dataset_paths = [os.path.join(dataset_folder, "data/train.json"), os.path.join(dataset_folder, "data/dev.json"), os.path.join(dataset_folder, "data/test.json")]
 
-subprocess.run(['pip', 'list'])
 #os.chmod(train_script, 0o755)
-#subprocess.run(["bash", train_script, "ace-event"])
+#subprocess.run(["ls", "data"])
+subprocess.run(["pip", "install", "-r", "requirements.txt"])
+subprocess.run(["bash", train_script, "ace-event"])
 
-# task.close()
+
+task.close()
 
 
 
