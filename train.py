@@ -39,10 +39,11 @@ class bucket_ops:
     def upload_file(local_path:str, remote_path:str):
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
-task = Task.init("DocIE", "longdygiepp")
+task = Task.init("Dygiepp", "longdygiepp")
 task.execute_remotely(queue_name="default", exit_process=True)
 
-#Download Pretrained Models
+# Download Pretrained Models
+
 # bucket_ops.download_folder(
 #     local_path="./pretrained/longformer-base-4096", 
 #     remote_path="s3://experiment-logging/pretrained/longformer-base-4096", 
@@ -50,11 +51,11 @@ task.execute_remotely(queue_name="default", exit_process=True)
 
 import os, subprocess, sys
 
-dataset = Dataset.get(dataset_name="collated-data", dataset_project="datasets/ace05-event", dataset_tags=["original"], only_published=True)
+dataset = Dataset.get(dataset_name="wikievents-dygiepp-fmt", dataset_project="datasets/wikievents", dataset_tags=["dygiepp"], only_published=True)
 dataset_folder = dataset.get_local_copy()
-
 # if os.path.exists(dataset_folder)==False:
-os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
+# os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
+os.symlink(os.path.join(dataset_folder, "data", "upload"), "{}/data".format(os.getcwd()))
 
 current_dir = os.getcwd()
 train_script = os.path.join(current_dir, "scripts/train.sh")
@@ -66,8 +67,10 @@ sys.path.append(current_dir)
 #os.chmod(train_script, 0o755)
 #subprocess.run(["ls", "data"])
 subprocess.run(["pip", "install", "-r", "requirements.txt"])
-subprocess.run(["bash", train_script, "ace-event"])
+subprocess.run(["bash", train_script, "wikievent"])
 
+task.upload_artifact('model', artifact_object=os.path.join("models", "wikievent", "model.tar.gz"))
+task.upload_artifact('train_metrics', artifact_object=os.path.join('models', 'wikievent', "metrics.json"))
 
 task.close()
 
