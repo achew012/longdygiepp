@@ -154,7 +154,7 @@ def run_single_text_flow(input_text:str, pretrained_model_path:str, title='no-ti
 
 def run_dataset(dataset, pretrained_model_path:str, spacy_model="en_core_web_md", model_type="ace-event"):
     output = []
-    nlp = spacy.load(spacy_model)
+    # nlp = spacy.load(spacy_model)
     dataset_reader, model = get_model(pretrained_model_path)
 
     print("Detected {} documents.".format(len(dataset)))
