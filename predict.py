@@ -2,7 +2,7 @@ from clearml import Task, StorageManager, Dataset
 import dygie_api as dygie
 import os, sys, json
 
-task = Task.init("Dygiepp", "predict")
+task = Task.init("Dygiepp", "predict", output_uri="s3://experiment-logging/storage/")
 task.execute_remotely(queue_name="128RAMv100", exit_process=True)
 
 class bucket_ops:
@@ -27,9 +27,11 @@ class bucket_ops:
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
 bucket_ops.download_folder(
-    local_path="/models/dygiepp", 
-    remote_path="http://experiment.sytes.net:8081/Dygiepp/longdygiepp.68bf0f59cbe54e7ca3738f23eb18b0da/artifacts/model/model.tar.gz", 
+    local_path="/models/dygiepp/", 
+    remote_path="s3://experiment-logging/storage/Dygiepp/train.ca2c9892d8c34c089019108853d0fa27/artifacts/model/", 
 )
+
+print(list(os.walk("/models/dygiepp")))
 
 dataset = Dataset.get(dataset_name="wikievents-dygiepp-fmt", dataset_project="datasets/wikievents", dataset_tags=["dygiepp"], only_published=True)
 dataset_folder = dataset.get_local_copy()
@@ -39,8 +41,9 @@ os.symlink(os.path.join(dataset_folder, "data", "upload"), "{}/data".format(curr
 sys.path.append(current_dir)
 
 test_set = dygie.read_json(os.path.join(current_dir,"data/test.jsonl"))
-results = dygie.run_dataset(test_set, pretrained_model_path="/models/dygiepp", spacy_model="en_core_web_md", model_type="wikievent")
+results = dygie.run_dataset(test_set, pretrained_model_path="/models/dygiepp/model.tar.gz", spacy_model="en_core_web_md", model_type="wikievent")
+dygie.to_jsonl("predictions.jsonl", results)
 
-task.upload_artifact('predictions', artifact_object=results)
+task.upload_artifact('predictions', artifact_object="predictions.jsonl")
 task.close()
 

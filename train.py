@@ -39,8 +39,8 @@ class bucket_ops:
     def upload_file(local_path:str, remote_path:str):
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
-task = Task.init("Dygiepp", "longdygiepp")
-task.execute_remotely(queue_name="default", exit_process=True)
+task = Task.init("Dygiepp", "train", output_uri="s3://experiment-logging/storage/")
+task.execute_remotely(queue_name="128RAMv100", exit_process=True)
 
 # Download Pretrained Models
 
@@ -51,7 +51,7 @@ task.execute_remotely(queue_name="default", exit_process=True)
 
 import os, subprocess, sys
 
-dataset = Dataset.get(dataset_name="wikievents-dygiepp-fmt", dataset_project="datasets/wikievents", dataset_tags=["dygiepp"], only_published=True)
+dataset = Dataset.get(dataset_name="wikievents-10events", dataset_project="datasets/wikievents", dataset_tags=["10events"], only_published=True)
 dataset_folder = dataset.get_local_copy()
 # if os.path.exists(dataset_folder)==False:
 # os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))

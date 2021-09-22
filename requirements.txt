@@ -6,3 +6,4 @@ lxml
 python-Levenshtein
 optuna>=2.1.0
 clearml
+jsonlines
