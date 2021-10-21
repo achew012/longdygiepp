@@ -39,8 +39,8 @@ class bucket_ops:
     def upload_file(local_path:str, remote_path:str):
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
-#Task.add_requirements("torch")
-task = Task.init("Dygiepp", "train-muc4", output_uri="s3://experiment-logging/storage/")
+Task.add_requirements("torch")
+task = Task.init("Dygiepp", "muc4-train", output_uri="s3://experiment-logging/storage/")
 task.execute_remotely(queue_name="128RAMv100", exit_process=True)
 
 # Download Pretrained Models
@@ -60,6 +60,7 @@ dataset_folder = dataset.get_local_copy()
 # if os.path.exists(dataset_folder)==False:
 # os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
 #os.symlink(os.path.join(dataset_folder, "data", "upload"), "{}/data".format(os.getcwd()))
+os.remove("{}/data".format(os.getcwd()))
 os.symlink(os.path.join(dataset_folder, "data/muc4-grit/processed"), "{}/data".format(os.getcwd()))
 
 ######################################################################################################################33
@@ -126,28 +127,27 @@ def convert_muc42dygiepp(dataset, tokenizer):
             {
               "doc_key": docid,
               "dataset": "muc4",
-              "sentences": tokenizer.tokenize(context),
-              "ner": entities
+              "sentences": [tokenizer.tokenize(context)],
+              "ner": [entities]
             }
         )
     return new_dataset
 
-train_data = read_json(os.path.join(dataset_folder, "data/muc4-grit/processed/train.json"))
-dev_data = read_json(os.path.join(dataset_folder, "data/muc4-grit/processed/dev.json"))
-test_data = read_json(os.path.join(dataset_folder, "data/muc4-grit/processed/test.json"))
+def process_datasets(dataset_folder, tokenizer):
+    datasets = ["train", "dev", "test"]
+    for dataset in datasets:
+        file = read_json(os.path.join(dataset_folder, "data/muc4-grit/processed/{}.json".format(dataset)))
+        data = convert_muc42dygiepp(file, tokenizer)
+        to_jsonl("./data/{}.jsonl".format(dataset), data)
 
-dygiepp_train = convert_muc42dygiepp(train_data, tokenizer)
-dygiepp_dev = convert_muc42dygiepp(dev_data, tokenizer)
-dygiepp_test = convert_muc42dygiepp(test_data, tokenizer)
-
-to_jsonl("./data/train.jsonl", dygiepp_train)
-to_jsonl("./data/dev.jsonl", dygiepp_dev)
-to_jsonl("./data/test.jsonl", dygiepp_test)
+process_datasets(dataset_folder, tokenizer)
 
 ###############################################################################################
 
 current_dir = os.getcwd()
 train_script = os.path.join(current_dir, "scripts/train.sh")
+predict_script = os.path.join(current_dir, "scripts/predict.sh")
+
 sys.path.append(current_dir)
 # Use this to initiate the dataset/dataloader objects
 #dataset_paths = [os.path.join(dataset_folder, "data/train.json"), os.path.join(dataset_folder, "data/dev.json"), os.path.join(dataset_folder, "data/test.json")]

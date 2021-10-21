@@ -1,9 +1,22 @@
 from clearml import Task, StorageManager, Dataset
-import os, sys, json, jsonlines
+import json, ipdb, jsonlines
 
-task = Task.init("Dygiepp", "predict-muc4", output_uri="s3://experiment-logging/storage/")
-# task.set_base_docker("nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04")
-# task.execute_remotely(queue_name="128RAMv100", exit_process=True)
+# def create_clearml_dataset(dataset_project, dataset_version, local_dataset_path:str, tags=[]):
+#     dataset = Dataset.create(dataset_name=dataset_version, dataset_project=dataset_project, dataset_tags=tags, parent_datasets=None, use_current_task=False)
+#     logger = dataset.get_logger() # for logging of media to debug samples
+#     dataset.add_files(local_dataset_path, wildcard="*.json", local_base_folder=".", dataset_path="data", recursive=True, verbose=False)
+#     dataset.upload(output_url="s3://experiment-logging/datasets")
+#     dataset.finalize()
+#     dataset.publish()
+#     print("Files added", dataset.list_files())
+#     return dataset
+
+# def delete_dataset(dataset_project, dataset_name):
+#     Dataset.delete(dataset_name=dataset_name, dataset_project=dataset_project, force=True)
+
+#delete_dataset(dataset_name="processed-data", dataset_project="ace05-event")
+#dataset = create_clearml_dataset("ace05-event", "processed-data", "data/ace-event/processed-data/default-settings/json/", tags = ["original"])
+#dataset = create_clearml_dataset("ace05-event", "collated-data", "data/ace-event/collated-data/default-settings/json/", tags = ["original"])
 
 class bucket_ops:
     StorageManager.set_cache_file_limit(5, cache_context=None)
@@ -26,36 +39,34 @@ class bucket_ops:
     def upload_file(local_path:str, remote_path:str):
         StorageManager.upload_file(local_path, remote_path, wait_for_upload=True, retries=3)
 
-### Download trained model
-bucket_ops.download_folder(
-    local_path="./models/dygiepp", 
-    remote_path="s3://experiment-logging/storage/Dygiepp/muc4-train.e232db10bded42d9a754978630c192ea/artifacts/model/model.tar.gz", 
-)
+Task.add_requirements("torch")
+task = Task.init("Dygiepp", "muc4-train", output_uri="s3://experiment-logging/storage/")
+task.execute_remotely(queue_name="128RAMv100", exit_process=True)
 
+# Download Pretrained Models
 # bucket_ops.download_folder(
-#     local_path="/models/dygiepp", 
-#     remote_path="s3://experiment-logging/pretrained/ace-doc", 
-# )
+#     local_path="./pretrained/longformer-base-4096", 
+#     remote_path="s3://experiment-logging/pretrained/longformer-base-4096", 
+#     )
 
-print(list(os.walk("/models/dygiepp")))
+import os, subprocess, sys
+
+# dataset = Dataset.get(dataset_name="wikievents-10events", dataset_project="datasets/wikievents", dataset_tags=["10events"], only_published=True)
+# dataset_folder = dataset.get_local_copy()
 
 dataset = Dataset.get(dataset_name="muc4-processed", dataset_project="datasets/muc4", dataset_tags=["processed", "GRIT"], only_published=True)
 dataset_folder = dataset.get_local_copy()
 
-# dataset = Dataset.get(dataset_name="wikievents-10events", dataset_project="datasets/wikievents", dataset_tags=["dygiepp"], only_published=True)
-# dataset_folder = dataset.get_local_copy()
-
-current_dir = os.getcwd()
-# os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(current_dir))
-# os.symlink(os.path.join(dataset_folder, "data", "upload"), "{}/data".format(current_dir))
+# if os.path.exists(dataset_folder)==False:
+# os.symlink(os.path.join(dataset_folder, "data", "data"), "{}/data".format(os.getcwd()))
+#os.symlink(os.path.join(dataset_folder, "data", "upload"), "{}/data".format(os.getcwd()))
 os.remove("{}/data".format(os.getcwd()))
 os.symlink(os.path.join(dataset_folder, "data/muc4-grit/processed"), "{}/data".format(os.getcwd()))
-sys.path.append(current_dir)
 
-###############################################################################################
+######################################################################################################################33
 
-#from transformers import AutoTokenizer
-#tokenizer = AutoTokenizer.from_pretrained('allenai/longformer-base-4096', use_fast=True)
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained('allenai/longformer-base-4096', use_fast=True)
 
 def read_json(jsonfile):
     with open(jsonfile, 'rb') as file:
@@ -129,18 +140,32 @@ def process_datasets(dataset_folder, tokenizer):
         data = convert_muc42dygiepp(file, tokenizer)
         to_jsonl("./data/{}.jsonl".format(dataset), data)
 
-#process_datasets(dataset_folder, tokenizer)
+process_datasets(dataset_folder, tokenizer)
 
-##################################################################################################
-import dygie_api as dygie
+###############################################################################################
 
-test_set = dygie.read_json(os.path.join(current_dir,"data/test.jsonl"))
-# test_set = [{**doc, 'dataset': 'dwie'} for doc in test_set]
-#results = dygie.run_dataset(test_set, pretrained_model_path="/models/dygiepp/model.tar.gz", spacy_model="en_core_web_md", model_type="wikievent")
-results = dygie.run_dataset(test_set, pretrained_model_path="./models/muc4/model/model.tar.gz", spacy_model="en_core_web_md", model_type="muc4")
-dygie.to_jsonl("predictions.jsonl", results)
+current_dir = os.getcwd()
+train_script = os.path.join(current_dir, "scripts/train.sh")
+predict_script = os.path.join(current_dir, "scripts/predict.sh")
 
+sys.path.append(current_dir)
+# Use this to initiate the dataset/dataloader objects
+#dataset_paths = [os.path.join(dataset_folder, "data/train.json"), os.path.join(dataset_folder, "data/dev.json"), os.path.join(dataset_folder, "data/test.json")]
 
-task.upload_artifact('predictions', artifact_object="predictions.jsonl")
+#os.chmod(train_script, 0o755)
+#subprocess.run(["ls", "data"])
+subprocess.run(["pip", "install", "-r", "requirements.txt"])
+
+#subprocess.run(["bash", train_script, "wikievent"])
+subprocess.run(["bash", predict_script, "muc4"])
+
+task.upload_artifact('model', artifact_object=os.path.join("models", "muc4", "model.tar.gz"))
+task.upload_artifact('train_metrics', artifact_object=os.path.join('models', 'muc4', "metrics.json"))
 task.close()
+
+# task.upload_artifact('model', artifact_object=os.path.join("models", "wikievent", "model.tar.gz"))
+# task.upload_artifact('train_metrics', artifact_object=os.path.join('models', 'wikievent', "metrics.json"))
+# task.close()
+
+
 

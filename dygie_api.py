@@ -12,7 +12,6 @@ from allennlp.data import Batch
 
 import json
 import jsonlines
-
 from spacy import displacy
 
 
